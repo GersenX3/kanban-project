@@ -1,1 +1,34 @@
-#PLAIN TEXT
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: auth_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: authuser
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: authdb
+    ports:
+      - "5432:5432" # acceso local si quieres usar pgAdmin/DBeaver
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  api-auth:
+    build: ./api-auth
+    container_name: api_auth
+    restart: always
+    depends_on:
+      - postgres
+    environment:
+      FLASK_ENV: development
+      DATABASE_URL: postgresql+psycopg2://authuser:secret@postgres:5432/authdb
+      JWT_SECRET_KEY: super-secret-key
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./api-auth:/app  # hot reload del código
+    command: flask --app app run --host=0.0.0.0 --port=5000
+
+volumes:
+  postgres_data:
