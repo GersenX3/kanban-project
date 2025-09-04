@@ -1,0 +1,3 @@
+[submodule "kanban-ui"]
+	path = kanban-ui
+	url = https://github.com/GersenX3/kanban-ui.git
