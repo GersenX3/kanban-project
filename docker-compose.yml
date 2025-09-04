@@ -14,9 +14,9 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
-  api-auth:
+  kanban-api-auth:
     build: ./kanban-api-auth
-    container_name: api_auth
+    container_name: kanban-api-auth
     restart: always
     depends_on:
       - postgres
@@ -27,7 +27,7 @@ services:
     ports:
       - "5000:5000"
     volumes:
-      - ./api-auth:/app  # hot reload del código
+      - ./kanban-api-auth:/app  # hot reload del código
     command: flask --app app:create_app run --host=0.0.0.0 --port=5000
 
 volumes:
