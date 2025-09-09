@@ -1,34 +1,77 @@
-version: "3.9"
-
 services:
-  postgres:
-    image: postgres:15
-    container_name: auth_postgres
-    restart: always
-    environment:
-      POSTGRES_USER: authuser
-      POSTGRES_PASSWORD: secret
-      POSTGRES_DB: authdb
-    ports:
-      - "5432:5432" # acceso local si quieres usar pgAdmin/DBeaver
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-
   kanban-api-auth:
     build: ./kanban-api-auth
     container_name: kanban-api-auth
-    restart: always
-    depends_on:
-      - postgres
-    environment:
-      FLASK_ENV: development
-      DATABASE_URL: postgresql+psycopg2://authuser:secret@postgres:5432/authdb
-      JWT_SECRET_KEY: super-secret-key
     ports:
       - "5000:5000"
+    environment:
+      # Asegura que el host, el usuario, la base de datos y la contraseña coincidan con el servicio de la base de datos
+      DATABASE_URL: "postgresql://authuser:supersecretpassword@postgres-auth/authdb"
+      DB_HOST: "postgres-auth"  # Corregido: el nombre del servicio es postgres-auth
+      DB_USER: "authuser"
+      DB_NAME: "authdb"
+      DB_PASSWORD: "supersecretpassword"
+    depends_on:
+      postgres-auth:
+        condition: service_healthy
+
+    restart: on-failure
+  
+  postgres-auth:
+    image: postgres:13
+    container_name: postgres-auth
+    environment:
+      POSTGRES_USER: "authuser"
+      POSTGRES_PASSWORD: "supersecretpassword"  # Asegura que esta contraseña coincida con la de la API
+      POSTGRES_DB: "authdb"
     volumes:
-      - ./kanban-api-auth:/app  # hot reload del código
-    command: flask --app app:create_app run --host=0.0.0.0 --port=5000
+      - auth-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: on-failure
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U authuser -d authdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  kanban-api-logic:
+    build: ./kanban-api-logic
+    container_name: kanban-api-logic
+    ports:
+      - "5001:5001"
+    environment:
+      # Asegura que el host, el usuario, la base de datos y la contraseña coincidan con el servicio de la base de datos
+      DATABASE_URL: "postgresql://kanbanuser:supersecretpassword@postgres-kanban/kanbandb"
+      DB_HOST: "postgres-kanban"  # Corregido: el nombre del servicio es postgres-auth
+      DB_USER: "kanbanuser"
+      DB_NAME: "kanbandb"
+      DB_PASSWORD: "supersecretpassword"
+    depends_on:
+      postgres-kanban:
+        condition: service_healthy
+
+    restart: on-failure
+
+
+  postgres-kanban:
+    image: postgres:13
+    container_name: postgres-kanban
+    environment:
+      POSTGRES_USER: "kanbanuser"
+      POSTGRES_PASSWORD: "supersecretpassword"  # Asegura que esta contraseña coincida con la de la API
+      POSTGRES_DB: "kanbandb"
+    volumes:
+      - kanban-data:/var/lib/postgresql/data
+    ports:
+      - "5433:5433"
+    restart: on-failure
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kanbanuser -d kanbandb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
 volumes:
-  postgres_data:
+  auth-data:
+  kanban-data:
