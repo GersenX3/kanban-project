@@ -4,6 +4,3 @@
 [submodule "kanban-api-auth"]
 	path = kanban-api-auth
 	url = https://github.com/GersenX3/kanban-api-auth.git
-[submodule "kanban-api-logic"]
-	path = kanban-api-logic
-	url = https://github.com/GersenX3/kanban-api-logic.git

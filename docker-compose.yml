@@ -1,28 +1,44 @@
 services:
+  # Servicio de la API (tu configuración existente)
   kanban-api-auth:
     build: ./kanban-api-auth
     container_name: kanban-api-auth
     ports:
       - "5000:5000"
     environment:
-      # Asegura que el host, el usuario, la base de datos y la contraseña coincidan con el servicio de la base de datos
       DATABASE_URL: "postgresql://authuser:supersecretpassword@postgres-auth/authdb"
-      DB_HOST: "postgres-auth"  # Corregido: el nombre del servicio es postgres-auth
+      DB_HOST: "postgres-auth"
       DB_USER: "authuser"
       DB_NAME: "authdb"
       DB_PASSWORD: "supersecretpassword"
     depends_on:
       postgres-auth:
         condition: service_healthy
-
     restart: on-failure
-  
+    networks:
+      - kanban-network
+
+  # Servicio de React UI (Producción con nginx)
+  kanban-ui:
+    build:
+      context: ./kanban-ui # Ajusta esta ruta según tu estructura
+      dockerfile: Dockerfile
+    container_name: kanban-ui
+    ports:
+      - "3000:80" # Puerto 3000 externo, 80 interno (nginx)
+    depends_on:
+      - kanban-api-auth
+    restart: on-failure
+    networks:
+      - kanban-network
+
+  # Base de datos (tu configuración existente)
   postgres-auth:
     image: postgres:13
     container_name: postgres-auth
     environment:
       POSTGRES_USER: "authuser"
-      POSTGRES_PASSWORD: "supersecretpassword"  # Asegura que esta contraseña coincida con la de la API
+      POSTGRES_PASSWORD: "supersecretpassword"
       POSTGRES_DB: "authdb"
     volumes:
       - auth-data:/var/lib/postgresql/data
@@ -34,44 +50,12 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-
-  kanban-api-logic:
-    build: ./kanban-api-logic
-    container_name: kanban-api-logic
-    ports:
-      - "5001:5001"
-    environment:
-      # Asegura que el host, el usuario, la base de datos y la contraseña coincidan con el servicio de la base de datos
-      DATABASE_URL: "postgresql://kanbanuser:supersecretpassword@postgres-kanban/kanbandb"
-      DB_HOST: "postgres-kanban"  # Corregido: el nombre del servicio es postgres-auth
-      DB_USER: "kanbanuser"
-      DB_NAME: "kanbandb"
-      DB_PASSWORD: "supersecretpassword"
-    depends_on:
-      postgres-kanban:
-        condition: service_healthy
-
-    restart: on-failure
-
-
-  postgres-kanban:
-    image: postgres:13
-    container_name: postgres-kanban
-    environment:
-      POSTGRES_USER: "kanbanuser"
-      POSTGRES_PASSWORD: "supersecretpassword"  # Asegura que esta contraseña coincida con la de la API
-      POSTGRES_DB: "kanbandb"
-    volumes:
-      - kanban-data:/var/lib/postgresql/data
-    ports:
-      - "5433:5433"
-    restart: on-failure
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U kanbanuser -d kanbandb"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+    networks:
+      - kanban-network
 
 volumes:
   auth-data:
-  kanban-data:
+
+networks:
+  kanban-network:
+    driver: bridge
